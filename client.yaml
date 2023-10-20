@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lbtest-client
+spec:
+  selector:
+    matchLabels:
+      app: lbtest
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: lbtest
+    spec:
+      containers:
+      - image: ghcr.io/cybozu/golang:1.21-jammy
+        imagePullPolicy: IfNotPresent
+        name: main
+        command:
+        - go
+        - run
+        - .
+        workingDir: /go/src
+        env:
+        - name: HTTP_PROXY
+          value: http://squid.internet-egress.svc:3128
+        - name: HTTPS_PROXY
+          value: http://squid.internet-egress.svc:3128
+        - name: NO_PROXY
+          value: 10.0.0.0/8
+        volumeMounts:
+        - name: cache
+          mountPath: /.cache
+        - name: go-pkg
+          mountPath: /go/pkg
+        - name: go-src
+          mountPath: /go/src
+      securityContext:
+        runAsUser: 10000
+        runAsGroup: 10000
+      volumes:
+      - name: cache
+        emptyDir: {}
+      - name: go-pkg
+        emptyDir: {}
+      - name: go-src
+        configMap:
+          name: lbtest-go-src
